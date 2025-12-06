@@ -13,7 +13,7 @@ API_URL = "https://rest-v1.volmex.finance/public/iv/history"
 
 ASSETS = [
     ("BVIV", 43),  # BTC
-    ("EVIV", 100),  # ETH
+    ("EVIV", 65),  # ETH
     ("SVIV7D", 75),  # SOL
 ]
 
