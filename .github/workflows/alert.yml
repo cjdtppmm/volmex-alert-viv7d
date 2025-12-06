@@ -1,0 +1,42 @@
+name: Volmex IV Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # 每5分钟运行
+  workflow_dispatch:        # 可手动运行
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 运行需要 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      # 下载状态文件（防重复推送）
+      - name: Download previous state
+        uses: actions/download-artifact@v4
+        with:
+          name: iv-state
+        continue-on-error: true
+
+      - name: Run IV monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python iv_monitor.py
+
+      - name: Upload current state
+        uses: actions/upload-artifact@v4
+        with:
+          name: iv-state
+          path: iv_status.json
