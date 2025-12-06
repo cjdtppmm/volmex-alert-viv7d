@@ -1,92 +1,68 @@
 import requests
 from datetime import datetime
-import json
-import os
+import time
 
-# ========== 配置 ==========
-ASSETS = {
-    "BVIV7D": {"name": "BTC", "threshold": 40},
-    "EVIV7D": {"name": "ETH", "threshold": 65},
-    "SVIV7D": {"name": "SOL", "threshold": 70},
-}
+# ===== 推送配置 =====
+PUSHDEER_KEY = "YOUR_PUSHDEER_KEY"
 
-VOLMEX_URL = "https://rest-v1.volmex.finance/public/iv/history"
+TG_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TG_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID"
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+# ===== Volmex API =====
+API_URL = "https://rest-v1.volmex.finance/public/iv/history"
 
-STATE_FILE = "iv_status.json"
+ASSETS = [
+    ("BVIV7D", 40),  # BTC
+    ("EVIV7D", 65),  # ETH
+    ("SVIV7D", 70),  # SOL
+]
 
+def push_pushdeer(text):
+    try:
+        url = f"https://api2.pushdeer.com/message/push?pushkey={PUSHDEER_KEY}&text={text}"
+        requests.get(url, timeout=5)
+    except:
+        pass
 
-def load_status():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r") as f:
-            return json.load(f)
-    return {symbol: False for symbol in ASSETS}
+def push_telegram(text):
+    try:
+        url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
+        params = {"chat_id": TG_CHAT_ID, "text": text}
+        requests.get(url, params=params, timeout=5)
+    except:
+        pass
 
-
-def save_status(status):
-    with open(STATE_FILE, "w") as f:
-        json.dump(status, f)
-
-
-def telegram_push(msg: str):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("❌ Telegram 未配置")
-        return
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": msg})
-
-
-def fetch_iv(symbol):
+def check_iv(symbol, threshold):
     now = int(datetime.utcnow().timestamp())
-    from_time = now - 7 * 24 * 3600
+    days_ago_7 = now - 7 * 24 * 3600
 
     params = {
         "symbol": symbol,
         "resolution": "D",
-        "from": from_time,
-        "to": now,
+        "from": days_ago_7,
+        "to": now
     }
 
-    resp = requests.get(VOLMEX_URL, params=params, timeout=10).json()
+    res = requests.get(API_URL, params=params, timeout=10).json()
 
-    if resp.get("s") != "ok":
-        print(f"⚠️ API 错误：{symbol} → {resp}")
-        return None
+    if res.get("s") != "ok":
+        print(f"API 返回错误: {res}")
+        return
 
-    iv = resp["c"][-1]
-    print(f"{datetime.now()} | {symbol} 最新IV: {iv:.2f}")
-    return iv
+    iv = res["c"][-1]
+    date = datetime.utcfromtimestamp(res["t"][-1]).strftime("%Y-%m-%d")
 
+    print(f"{date} {symbol} 最新 IV: {iv:.2f}")
+
+    if iv < threshold:
+        alert = f"⚠️ {symbol} 隐含波动率 {iv:.2f} < 阈值 {threshold}"
+        push_pushdeer(alert)
+        push_telegram(alert)
+        print("📲 已推送通知")
 
 def main():
-    status = load_status()
-
-    for symbol, cfg in ASSETS.items():
-        name = cfg["name"]
-        threshold = cfg["threshold"]
-
-        iv = fetch_iv(symbol)
-        if iv is None:
-            continue
-
-        if iv < threshold:
-            if not status[symbol]:
-                msg = f"⚠️ {name} 7D 隐含波动率 {iv:.2f}，低于 {threshold}（阈值）"
-                telegram_push(msg)
-                print("📨 已推送 Telegram")
-                status[symbol] = True
-            else:
-                print(f"⚠️ {name} 仍低于阈值，但已推送过。")
-        else:
-            print(f"✅ {name} 正常 IV: {iv:.2f}")
-            if status[symbol]:
-                status[symbol] = False
-
-    save_status(status)
-
+    for symbol, threshold in ASSETS:
+        check_iv(symbol, threshold)
 
 if __name__ == "__main__":
     main()
