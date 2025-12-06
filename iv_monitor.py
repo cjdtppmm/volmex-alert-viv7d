@@ -12,8 +12,8 @@ TG_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID"
 API_URL = "https://rest-v1.volmex.finance/public/iv/history"
 
 ASSETS = [
-    ("BVIV", 40),  # BTC
-    ("EVIV", 65),  # ETH
+    ("BVIV", 43),  # BTC
+    ("EVIV", 70),  # ETH
     ("SVIV7D", 75),  # SOL
 ]
 
