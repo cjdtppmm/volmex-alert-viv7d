@@ -1,42 +1,33 @@
-name: Volmex IV Monitor
+name: IV Monitor
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # 每5分钟运行
-  workflow_dispatch:        # 可手动运行
+    - cron: "*/5 * * * *"   # 每 5 分钟运行
+  workflow_dispatch:
 
 jobs:
-  monitor:
+  run-monitor:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      # 运行需要 Python 环境
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
       - name: Install dependencies
         run: pip install requests
 
-      # 下载状态文件（防重复推送）
-      - name: Download previous state
-        uses: actions/download-artifact@v4
-        with:
-          name: iv-state
-        continue-on-error: true
-
       - name: Run IV monitor
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python iv_monitor.py
-
-      - name: Upload current state
-        uses: actions/upload-artifact@v4
-        with:
-          name: iv-state
-          path: iv_status.json
+          PUSHDEER_KEY: ${{ secrets.PUSHDEER_KEY }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          sed -i "s/YOUR_PUSHDEER_KEY/$PUSHDEER_KEY/" iv_monitor.py
+          sed -i "s/YOUR_TELEGRAM_BOT_TOKEN/$TG_BOT_TOKEN/" iv_monitor.py
+          sed -i "s/YOUR_TELEGRAM_CHAT_ID/$TG_CHAT_ID/" iv_monitor.py
+          python iv_monitor.py
