@@ -15,7 +15,7 @@ if not all([PUSHDEER_KEY, TG_BOT_TOKEN, TG_CHAT_ID]):
 API_URL = "https://rest-v1.volmex.finance/public/iv/history"
 
 ASSETS = {
-    "BVIV": 999,  # BTC
+    "BVIV7D": 999,  # BTC
     "EVIV": 65,  # ETH
     "SVIV7D": 70,  # SOL
 }
