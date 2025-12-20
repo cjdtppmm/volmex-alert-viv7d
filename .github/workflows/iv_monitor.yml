@@ -33,5 +33,8 @@ jobs:
           git config user.name "iv-monitor-bot"
           git config user.email "bot@github.com"
           git add iv_status.json || true
+
+          git pull --rebase
+          
           git commit -m "update iv status" || true
           git push
